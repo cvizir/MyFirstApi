@@ -1,3 +1,4 @@
+using MyFirstApi.Dtos; // 一定要在最上面，不然會報錯
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyFirstApi.Data;
@@ -17,10 +18,49 @@ public class ProductsController : ControllerBase
     }
 
     // 1. 取得所有資料 (GET: api/users)
+    // GET: api/products?keyword=滑鼠&page=1&pageSize=10
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Product>>> GetAll()
+    public async Task<ActionResult<PagedResult<Product>>> GetAll(
+    [FromQuery] string? keyword,
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 20)
     {
-        return await _context.Products.ToListAsync();
+        // 1. 參數防呆：避免前端傳入負數或一次撈取過多資料
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+
+        // 2. 建立基礎查詢（AsNoTracking 可提升純讀取效能）
+        var query = _context.Products.AsNoTracking().AsQueryable();
+
+        // 3. 關鍵字搜尋（有傳入 keyword 時才加上 WHERE 條件）
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            keyword = keyword.Trim();
+            // 對應 MySQL 的 LIKE '%keyword%'，請將 p.Name 換成你實際的欄位名稱
+            query = query.Where(p => p.Name != null && p.Name.Contains(keyword));
+        }
+
+        // 4. 先計算符合搜尋條件的總筆數
+        var totalCount = await query.CountAsync();
+
+        // 5. 排序並進行分頁（請將 p.ProductId 換成你實際的主鍵欄位）
+        var items = await query
+            .OrderBy(p => p.Uptime)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        // 6. 封裝成統一的分頁格式回傳
+        var result = new PagedResult<Product>
+        {
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize,
+            Items = items
+        };
+
+        return Ok(result);
     }
 
     // 2. 取得單筆資料 (GET: api/users/1)
