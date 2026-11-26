@@ -131,4 +131,13 @@ public class ProductsController : ControllerBase
 
         return NoContent();
     }
+
+    // 測試用：故意拋出未預期的錯誤（測試完可刪除）
+    [HttpGet("test-error")]
+    public IActionResult TestError()
+    {
+        throw new Exception("這是故意觸發的測試錯誤！");
+    }
+
+
 }
