@@ -23,6 +23,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+// 本機開發環境不強制轉址 HTTPS
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
