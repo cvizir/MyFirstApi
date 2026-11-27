@@ -1,4 +1,8 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using MyFirstApi.Data;
 using MyFirstApi.Middlewares; // 引入命名空間
 
@@ -9,7 +13,48 @@ builder.Services.AddControllers();
 
 // 註冊 Swagger 服務
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+// 設定 Swagger 支援 JWT 輸入介面
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "請直接貼上登入後取得的 JWT Token（不需要手動輸入 Bearer）"
+    });
+
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+    });
+});
+
+// 註冊 JWT 驗證規則
+var jwtSettings = builder.Configuration.GetSection("Jwt");
+var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSettings["Issuer"],
+        ValidAudience = jwtSettings["Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(key)
+    };
+});
 
 
 // 註冊全域錯誤處理器與 ProblemDetails 服務
@@ -57,6 +102,8 @@ if (!app.Environment.IsDevelopment())
 // 啟用 CORS（注意：必須放在 UseAuthorization 與 MapControllers 之前）
 app.UseCors("AllowFrontend");
 
+// 【新增步驟 C】啟用身分驗證（注意：必須放在 UseAuthorization 之前）
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

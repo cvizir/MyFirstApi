@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyFirstApi.Data;
 using MyFirstApi.Models;
+using Microsoft.AspNetCore.Authorization; // 引入命名空間
 
 namespace MyFirstApi.Controllers;
 
@@ -19,6 +20,7 @@ public class ProductsController : ControllerBase
 
     // 1. 取得所有資料 (GET: api/users)
     // GET: api/products?keyword=滑鼠&page=1&pageSize=10
+    [Authorize]
     [HttpGet]
     public async Task<ActionResult<PagedResult<Product>>> GetAll(
     [FromQuery] string? keyword,
