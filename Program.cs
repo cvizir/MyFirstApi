@@ -5,8 +5,22 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using MyFirstApi.Data;
 using MyFirstApi.Middlewares; // 引入命名空間
+using FluentValidation;
+using MyFirstApi.Interfaces;
+using MyFirstApi.Repositories;
+using MyFirstApi.Services;
+using MyFirstApi.Validators;
+
 
 var builder = WebApplication.CreateBuilder(args);
+
+// 1. 註冊 Repository 與 Service（每次 HTTP 請求建立一個實例）
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<IProductService, ProductService>();
+
+// 2. 自動掃描並註冊所有繼承 AbstractValidator 的驗證器
+builder.Services.AddValidatorsFromAssemblyContaining<CreateProductValidator>();
+
 
 // 註冊 Controller
 builder.Services.AddControllers();
